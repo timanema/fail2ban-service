@@ -8,14 +8,14 @@ import (
 type MemoryStorage struct {
 	lock sync.RWMutex
 
-	authEntries map[string]map[AuthenticationEntry]struct{}
+	authEntries  map[string]map[AuthenticationEntry]struct{}
 	blockEntries map[string]BlockEntry
 }
 
 func NewMemoryStore() Storage {
 	return &MemoryStorage{
-		lock: sync.RWMutex{},
-		authEntries: make(map[string]map[AuthenticationEntry]struct{}),
+		lock:         sync.RWMutex{},
+		authEntries:  make(map[string]map[AuthenticationEntry]struct{}),
 		blockEntries: make(map[string]BlockEntry),
 	}
 }
@@ -41,6 +41,18 @@ func (m *MemoryStorage) FindAuthenticationEntries(ip string) (map[Authentication
 	}
 
 	return nil, NotFoundErr
+}
+
+func (m *MemoryStorage) FindSources() (map[string]int, error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	res := make(map[string]int, len(m.authEntries))
+	for source, entries := range m.authEntries {
+		res[source] = len(entries)
+	}
+
+	return res, nil
 }
 
 func (m *MemoryStorage) AddBlockEntry(entry BlockEntry) error {
@@ -87,7 +99,7 @@ func (m *MemoryStorage) CleanBlockEntries() error {
 	defer m.lock.Unlock()
 
 	for ip, e := range m.blockEntries {
-		if e.Timestamp.Add(e.Duration).Before(time.Now()) {
+		if e.Timestamp.Time().Add(e.Duration).Before(time.Now()) {
 			delete(m.blockEntries, ip)
 		}
 	}

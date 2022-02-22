@@ -4,30 +4,36 @@ import (
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/timanema/fail2ban-service/pkg/storage"
+	"github.com/timanema/fail2ban-service/pkg/unix_time"
 	"sync"
 	"time"
 )
 
 type Policy struct {
-	Attempts int
-	Period, BlockTime time.Duration
+	Attempts  int           `json:"attempts"`
+	Period    time.Duration `json:"period"`
+	BlockTime time.Duration `json:"blocktime"`
 }
 
 type Blocker struct {
-	lock sync.Mutex
-	store storage.Storage
+	lock   sync.Mutex
+	store  storage.Storage
 	policy Policy
 }
 
 func New(store storage.Storage, policy Policy) *Blocker {
 	return &Blocker{
-		lock: sync.Mutex{},
+		lock:   sync.Mutex{},
 		store:  store,
 		policy: policy,
 	}
 }
 
 func (b *Blocker) AddEntry(entry storage.AuthenticationEntry) error {
+	if blocked, _ := b.IsBlocked(entry.Source); blocked {
+		return nil
+	}
+
 	if err := b.store.AddAuthenticationEntry(entry); err != nil {
 		return errors.Wrap(err, "failed to add entry to store")
 	}
@@ -39,11 +45,11 @@ func (b *Blocker) AddEntry(entry storage.AuthenticationEntry) error {
 
 	count := 0
 	for entry := range entries {
-		if time.Now().Add(-1 * b.policy.Period).Before(entry.Timestamp) {
+		if time.Now().Add(-1 * b.policy.Period).Before(entry.Timestamp.Time()) {
 			count += 1
 
 			if count >= b.policy.Attempts {
-				if err := b.BlockIP(entry.Source); err != nil {
+				if _, err := b.BlockIP(entry.Source); err != nil {
 					return errors.Wrapf(err, "failed to block %v", entry.Source)
 				}
 				break
@@ -54,25 +60,25 @@ func (b *Blocker) AddEntry(entry storage.AuthenticationEntry) error {
 	return nil
 }
 
-func (b *Blocker) BlockIP(ip string) error {
+func (b *Blocker) BlockIP(ip string) (storage.BlockEntry, error) {
 	entry := storage.BlockEntry{
-		Source: ip,
-		Timestamp: time.Now(),
-		Duration: b.policy.BlockTime,
+		Source:    ip,
+		Timestamp: unix_time.Time(time.Now()),
+		Duration:  b.policy.BlockTime,
 	}
 
 	if err := b.store.AddBlockEntry(entry); err != nil {
-		return errors.Wrap(err, "failed to store block in store")
+		return storage.BlockEntry{}, errors.Wrap(err, "failed to store block in store")
 	}
 
-	return errors.Wrap(b.notifyExternal(entry), "failed to notify external modules of block")
+	return entry, errors.Wrap(b.notifyExternal(entry), "failed to notify external modules of block")
 }
 
 func (b *Blocker) UnblockIP(ip string) error {
 	// Expired entry
 	entry := storage.BlockEntry{
 		Source:    ip,
-		Timestamp: time.Now(),
+		Timestamp: unix_time.Time(time.Now()),
 		Duration:  -1 * b.policy.BlockTime,
 	}
 
@@ -93,7 +99,7 @@ func (b *Blocker) IsBlocked(ip string) (bool, error) {
 		return false, errors.Wrap(err, "unable to load block entry")
 	}
 
-	return entry.Timestamp.Add(entry.Duration).After(time.Now()), nil
+	return entry.Timestamp.Time().Add(entry.Duration).After(time.Now()), nil
 }
 
 func (b *Blocker) UpdatePolicy(policy Policy) {
@@ -101,6 +107,13 @@ func (b *Blocker) UpdatePolicy(policy Policy) {
 	defer b.lock.Unlock()
 
 	b.policy = policy
+}
+
+func (b *Blocker) Policy() Policy {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	return b.policy
 }
 
 func (b *Blocker) NotifyAll() error {
@@ -123,7 +136,7 @@ func (b *Blocker) NotifyAll() error {
 
 func (b *Blocker) notifyExternal(entry storage.BlockEntry) error {
 	// TODO
-	block := entry.Timestamp.Add(entry.Duration).After(time.Now())
+	block := entry.Timestamp.Time().Add(entry.Duration).After(time.Now())
 	fmt.Printf("notifying external modules of %v (block=%v)\n", entry, block)
 	return nil
 }

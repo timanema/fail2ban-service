@@ -30,7 +30,7 @@ func New(store storage.Storage, policy Policy) *Blocker {
 }
 
 func (b *Blocker) AddEntry(entry storage.AuthenticationEntry) error {
-	if blocked, _ := b.IsBlocked(entry.Source); blocked {
+	if blocked, _, _ := b.IsBlocked(entry.Source); blocked {
 		return nil
 	}
 
@@ -89,17 +89,17 @@ func (b *Blocker) UnblockIP(ip string) error {
 	return errors.Wrap(b.notifyExternal(entry), "failed to notify external modules of unblock")
 }
 
-func (b *Blocker) IsBlocked(ip string) (bool, error) {
+func (b *Blocker) IsBlocked(ip string) (bool, storage.BlockEntry, error) {
 	entry, err := b.store.FindBlockEntry(ip)
 	if err == storage.NotFoundErr {
-		return false, nil
+		return false, storage.BlockEntry{}, nil
 	}
 
 	if err != nil {
-		return false, errors.Wrap(err, "unable to load block entry")
+		return false, storage.BlockEntry{}, errors.Wrap(err, "unable to load block entry")
 	}
 
-	return entry.Timestamp.Time().Add(entry.Duration).After(time.Now()), nil
+	return entry.Timestamp.Time().Add(entry.Duration).After(time.Now()), entry, nil
 }
 
 func (b *Blocker) UpdatePolicy(policy Policy) {

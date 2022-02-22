@@ -20,9 +20,9 @@ func (e AuthenticationEntry) Valid() bool {
 }
 
 type BlockEntry struct {
-	Source    string
-	Timestamp unix_time.Time
-	Duration  time.Duration
+	Source    string         `json:"source"`
+	Timestamp unix_time.Time `json:"timestamp"`
+	Duration  time.Duration  `json:"duration"`
 }
 
 type Storage interface {

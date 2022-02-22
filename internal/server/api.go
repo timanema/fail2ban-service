@@ -87,16 +87,21 @@ func (s *Server) addEntry(w http.ResponseWriter, r *http.Request) {
 func (s *Server) blockedQuery(w http.ResponseWriter, r *http.Request) {
 	ip := mux.Vars(r)["ip"]
 
-	blocked, err := s.blocker.IsBlocked(ip)
+	blocked, entry, err := s.blocker.IsBlocked(ip)
 	if err != nil {
 		writeError(err, w, http.StatusInternalServerError)
 		return
 	}
 
 	res := struct {
-		Blocked bool `json:"blocked"`
+		Blocked bool                `json:"blocked"`
+		Entry   *storage.BlockEntry `json:"entry,omitempty"`
 	}{
 		Blocked: blocked,
+		Entry:   &entry,
+	}
+	if !blocked {
+		res.Entry = nil
 	}
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
@@ -121,7 +126,7 @@ func (s *Server) block(w http.ResponseWriter, r *http.Request) {
 func (s *Server) unblock(w http.ResponseWriter, r *http.Request) {
 	ip := mux.Vars(r)["ip"]
 
-	if blocked, _ := s.blocker.IsBlocked(ip); !blocked {
+	if blocked, _, _ := s.blocker.IsBlocked(ip); !blocked {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, "%v bad request, %v is not blocked", http.StatusBadRequest, ip)
 		return

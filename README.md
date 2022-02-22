@@ -15,7 +15,7 @@ This section lists all provided endpoints
 | /api/entries/list/{ip} | Show all attempts of IP | GET | Timestamp is in unix time
 | /api/entries/add/{ip} | Add new attempt for IP | PUT | Service must be set. Entry will not be added if IP is already blocked | `{"source": <string>, "service": <string>, "timestamp": <int>}`
 | /api/modules | Show all active external modules | GET | Will return an array of all active modules: `{"id": <uint32>, "address": <string>, "method": <string>}`
-| /api/module | Add new external module | PUT | The server will make a HTTP request to the given address using the given module. The body will be as described in the [external module section](external-modules) | `{"address": <string>, "method": <string>}`
+| /api/module | Add new external module | PUT | The server will make a HTTP request to the given address using the given module. The body will be as described in the [external module section](#external-modules) | `{"address": <string>, "method": <string>}`
 | /api/module/{id} | Deletes the external module with the given ID | DELETE | The ID is returned at module creation, and when listing all modules
 
 ## External modules

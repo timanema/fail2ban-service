@@ -25,6 +25,12 @@ type BlockEntry struct {
 	Duration  time.Duration  `json:"duration"`
 }
 
+type ExternalModule struct {
+	Id      uint32 `json:"id"`
+	Address string `json:"address"`
+	Method  string `json:"method"`
+}
+
 type Storage interface {
 	AddAuthenticationEntry(entry AuthenticationEntry) error
 	FindAuthenticationEntries(ip string) (map[AuthenticationEntry]struct{}, error)
@@ -34,4 +40,8 @@ type Storage interface {
 	FindBlockEntry(ip string) (BlockEntry, error)
 	AllBlockEntries() ([]BlockEntry, error)
 	CleanBlockEntries() error
+	AddExternalModule(module ExternalModule) error
+	RemoveExternalModule(id uint32) error
+	GetExternalModules() ([]ExternalModule, error)
+	GetExternalModuleByAddress(address string) (ExternalModule, error)
 }

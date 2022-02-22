@@ -18,10 +18,17 @@ type Server struct {
 }
 
 func New(store storage.Storage, policy blocker.Policy) *Server {
-	return &Server{
+	s := &Server{
 		store:   store,
 		blocker: blocker.New(store, policy),
 	}
+
+	err := s.blocker.NotifyAll()
+	if err != nil {
+		log.Fatalf("unable to start blocker: %v\n\n", err)
+	}
+
+	return s
 }
 
 func (s *Server) ListenAndServe() {
@@ -33,6 +40,9 @@ func (s *Server) ListenAndServe() {
 	apiRouter.HandleFunc("/unblock/{ip}", s.unblock).Methods(http.MethodPost)
 	apiRouter.HandleFunc("/policy", s.getPolicy).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/policy", s.updatePolicy).Methods(http.MethodPatch)
+	apiRouter.HandleFunc("/modules", s.getExternalModules).Methods(http.MethodGet)
+	apiRouter.HandleFunc("/module", s.addExternalModule).Methods(http.MethodPut)
+	apiRouter.HandleFunc("/module/{id}", s.removeExternalModule).Methods(http.MethodDelete)
 
 	entryRouter := apiRouter.PathPrefix("/entries").Subrouter()
 	entryRouter.HandleFunc("/", s.listSources)

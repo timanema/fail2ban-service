@@ -7,7 +7,9 @@ import (
 	"github.com/timanema/fail2ban-service/pkg/blocker"
 	"github.com/timanema/fail2ban-service/pkg/storage"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
+	"strconv"
 )
 
 func writeError(err error, w http.ResponseWriter, code int) {
@@ -149,7 +151,7 @@ func (s *Server) getPolicy(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		writeError(err, w, http.StatusBadRequest)
+		writeError(err, w, http.StatusInternalServerError)
 		return
 	}
 
@@ -160,5 +162,67 @@ func (s *Server) updatePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.blocker.UpdatePolicy(policy)
+	writeSuccess(w)
+}
+
+func (s *Server) getExternalModules(w http.ResponseWriter, _ *http.Request) {
+	modules, err := s.store.GetExternalModules()
+	if err != nil {
+		writeError(err, w, http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(modules); err != nil {
+		writeError(err, w, http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) addExternalModule(w http.ResponseWriter, r *http.Request) {
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		writeError(err, w, http.StatusInternalServerError)
+		return
+	}
+
+	var module storage.ExternalModule
+	if err := json.Unmarshal(buf, &module); err != nil {
+		writeError(err, w, http.StatusBadRequest)
+		return
+	}
+
+	module.Id = rand.Uint32()
+
+	existingModule, err := s.store.GetExternalModuleByAddress(module.Address)
+	if err != nil && err != storage.NotFoundErr {
+		writeError(err, w, http.StatusInternalServerError)
+		return
+	}
+	if err != storage.NotFoundErr {
+		module.Id = existingModule.Id
+	}
+
+	if err := s.store.AddExternalModule(module); err != nil {
+		writeError(err, w, http.StatusBadRequest)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(module); err != nil {
+		writeError(err, w, http.StatusInternalServerError)
+	}
+}
+
+func (s *Server) removeExternalModule(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(mux.Vars(r)["id"])
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "%v bad request, %v is not a valid number", http.StatusBadRequest, id)
+		return
+	}
+
+	if err := s.store.RemoveExternalModule(uint32(id)); err != nil {
+		writeError(err, w, http.StatusInternalServerError)
+		return
+	}
+
 	writeSuccess(w)
 }

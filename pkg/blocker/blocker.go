@@ -1,10 +1,10 @@
 package blocker
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/timanema/fail2ban-service/pkg/storage"
 	"github.com/timanema/fail2ban-service/pkg/unix_time"
+	"log"
 	"sync"
 	"time"
 )
@@ -49,6 +49,7 @@ func (b *Blocker) AddEntry(entry storage.AuthenticationEntry) error {
 			count += 1
 
 			if count >= b.policy.Attempts {
+				log.Printf("source %v has violated the active policy\n", entry.Source)
 				if _, err := b.BlockIP(entry.Source); err != nil {
 					return errors.Wrapf(err, "failed to block %v", entry.Source)
 				}
@@ -71,6 +72,7 @@ func (b *Blocker) BlockIP(ip string) (storage.BlockEntry, error) {
 		return storage.BlockEntry{}, errors.Wrap(err, "failed to store block in store")
 	}
 
+	log.Printf("source %v was blocked\n", ip)
 	return entry, errors.Wrap(b.notifyExternal(entry), "failed to notify external modules of block")
 }
 
@@ -86,6 +88,7 @@ func (b *Blocker) UnblockIP(ip string) error {
 		return errors.Wrap(err, "failed to remove block entry from store")
 	}
 
+	log.Printf("source %v was unblocked\n", ip)
 	return errors.Wrap(b.notifyExternal(entry), "failed to notify external modules of unblock")
 }
 
@@ -107,6 +110,7 @@ func (b *Blocker) UpdatePolicy(policy Policy) {
 	defer b.lock.Unlock()
 
 	b.policy = policy
+	log.Printf("block policy was updated: %+v\n", policy)
 }
 
 func (b *Blocker) Policy() Policy {
@@ -131,12 +135,5 @@ func (b *Blocker) NotifyAll() error {
 	if err := b.store.CleanBlockEntries(); err != nil {
 		return errors.Wrap(err, "failed to clean block store")
 	}
-	return nil
-}
-
-func (b *Blocker) notifyExternal(entry storage.BlockEntry) error {
-	// TODO
-	block := entry.Timestamp.Time().Add(entry.Duration).After(time.Now())
-	fmt.Printf("notifying external modules of %v (block=%v)\n", entry, block)
 	return nil
 }

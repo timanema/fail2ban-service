@@ -7,6 +7,7 @@ import (
 	"github.com/timanema/fail2ban-service/pkg/blocker"
 	"github.com/timanema/fail2ban-service/pkg/storage"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -15,7 +16,7 @@ import (
 func writeError(err error, w http.ResponseWriter, code int) {
 	w.WriteHeader(code)
 	fmt.Fprintf(w, "%v, %v", code, http.StatusText(code))
-	fmt.Printf("error: %v\n", err)
+	log.Printf("error: %v\n", err)
 }
 
 func writeSuccess(w http.ResponseWriter) {

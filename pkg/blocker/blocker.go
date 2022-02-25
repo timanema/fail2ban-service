@@ -19,13 +19,16 @@ type Blocker struct {
 	lock   sync.Mutex
 	store  storage.Storage
 	policy Policy
+
+	lastExternalUpdate map[string]bool
 }
 
 func New(store storage.Storage, policy Policy) *Blocker {
 	return &Blocker{
-		lock:   sync.Mutex{},
-		store:  store,
-		policy: policy,
+		lock:               sync.Mutex{},
+		store:              store,
+		policy:             policy,
+		lastExternalUpdate: make(map[string]bool),
 	}
 }
 
@@ -100,6 +103,10 @@ func (b *Blocker) IsBlocked(ip string) (bool, storage.BlockEntry, error) {
 
 	if err != nil {
 		return false, storage.BlockEntry{}, errors.Wrap(err, "unable to load block entry")
+	}
+
+	if err := b.notifyExternal(entry); err != nil {
+		return false, storage.BlockEntry{}, errors.Wrap(err, "unable to update external modules")
 	}
 
 	return entry.Timestamp.Time().Add(entry.Duration).After(time.Now()), entry, nil

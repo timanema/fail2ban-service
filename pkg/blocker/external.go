@@ -23,6 +23,15 @@ func (b *Blocker) notifyExternal(entry storage.BlockEntry) error {
 		Blocked:    block,
 	}
 
+	// Check if notification is not needed
+	b.lock.Lock()
+	lastUpdate, ok := b.lastExternalUpdate[entry.Source]
+	b.lock.Unlock()
+
+	if ok && lastUpdate == block {
+		return nil
+	}
+
 	marshalledReq, err := json.Marshal(req)
 	if err != nil {
 		return errors.Wrap(err, "unable to marshal request")
@@ -56,6 +65,10 @@ func (b *Blocker) notifyExternal(entry storage.BlockEntry) error {
 			}
 		}()
 	}
+
+	b.lock.Lock()
+	b.lastExternalUpdate[entry.Source] = block
+	b.lock.Unlock()
 
 	return nil
 }

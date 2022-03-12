@@ -44,4 +44,5 @@ type Storage interface {
 	RemoveExternalModule(id uint32) error
 	GetExternalModules() ([]ExternalModule, error)
 	GetExternalModuleByAddress(address string) (ExternalModule, error)
+	Close() error
 }

@@ -255,3 +255,4 @@ modules.xml
 
 # End of https://www.toptal.com/developers/gitignore/api/goland,go,jetbrains,jetbrains+all
 
+*.gob

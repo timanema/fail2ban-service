@@ -25,3 +25,16 @@ func (t *Time) UnmarshalJSON(s []byte) (err error) {
 func (t Time) Time() time.Time {
 	return time.Time(t).UTC()
 }
+
+func (t Time) GobEncode() ([]byte, error) {
+	return t.Time().GobEncode()
+}
+
+func (t *Time) GobDecode(data []byte) error {
+	var t2 time.Time
+	if err := t2.GobDecode(data); err != nil {
+		return err
+	}
+	*t = Time(t2)
+	return nil
+}

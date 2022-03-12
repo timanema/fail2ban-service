@@ -155,3 +155,7 @@ func (m *MemoryStorage) GetExternalModuleByAddress(address string) (ExternalModu
 
 	return ExternalModule{}, NotFoundErr
 }
+
+func (m *MemoryStorage) Close() error {
+	return nil
+}

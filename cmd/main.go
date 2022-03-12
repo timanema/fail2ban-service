@@ -12,7 +12,8 @@ import (
 
 func main() {
 	log.Println("starting server")
-	s := server.New(storage.NewMemoryStore(), blocker.Policy{
+	p := storage.NewPersistentStore()
+	s := server.New(p, blocker.Policy{
 		Attempts:  3,
 		Period:    time.Second * 5,
 		BlockTime: time.Minute,
@@ -25,5 +26,11 @@ func main() {
 
 	<-stop
 	log.Println("stopping server")
-	log.Fatalln(s.Shutdown())
+
+	if err := p.Close(); err != nil {
+		log.Printf("failed to close storage: %v\n", err)
+	}
+	if err := s.Shutdown(); err != nil {
+		log.Fatalf("failed to stop server: %v\n", err)
+	}
 }

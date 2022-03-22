@@ -38,6 +38,7 @@ func (s *Server) ListenAndServe() {
 	apiRouter.HandleFunc("/blocked/{ip}", s.blockedQuery).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/block/{ip}", s.block).Methods(http.MethodPost)
 	apiRouter.HandleFunc("/unblock/{ip}", s.unblock).Methods(http.MethodPost)
+	apiRouter.HandleFunc("/blocks", s.listBlocks).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/policy", s.getPolicy).Methods(http.MethodGet)
 	apiRouter.HandleFunc("/policy", s.updatePolicy).Methods(http.MethodPatch)
 	apiRouter.HandleFunc("/modules", s.getExternalModules).Methods(http.MethodGet)

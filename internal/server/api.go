@@ -43,6 +43,18 @@ func (s *Server) listSources(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func (s *Server) listBlocks(w http.ResponseWriter, _ *http.Request) {
+	activeBlocks, err := s.store.AllBlockEntries(true)
+	if err != nil {
+		writeError(err, w, http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(activeBlocks); err != nil {
+		writeError(err, w, http.StatusInternalServerError)
+	}
+}
+
 func (s *Server) listEntries(w http.ResponseWriter, r *http.Request) {
 	ip := mux.Vars(r)["ip"]
 	entries, err := s.store.FindAuthenticationEntries(ip)

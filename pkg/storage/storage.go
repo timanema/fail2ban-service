@@ -25,6 +25,10 @@ type BlockEntry struct {
 	Duration  time.Duration  `json:"duration"`
 }
 
+func (e BlockEntry) IsActive() bool {
+	return e.Timestamp.Time().Add(e.Duration).After(time.Now())
+}
+
 type ExternalModule struct {
 	Id      uint32 `json:"id"`
 	Address string `json:"address"`
@@ -38,7 +42,7 @@ type Storage interface {
 	AddBlockEntry(entry BlockEntry) error
 	RemoveBlockEntry(ip string) error
 	FindBlockEntry(ip string) (BlockEntry, error)
-	AllBlockEntries() ([]BlockEntry, error)
+	AllBlockEntries(onlyActive bool) ([]BlockEntry, error)
 	CleanBlockEntries() error
 	AddExternalModule(module ExternalModule) error
 	RemoveExternalModule(id uint32) error

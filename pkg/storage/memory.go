@@ -85,13 +85,15 @@ func (m *MemoryStorage) FindBlockEntry(ip string) (BlockEntry, error) {
 	return BlockEntry{}, NotFoundErr
 }
 
-func (m *MemoryStorage) AllBlockEntries() ([]BlockEntry, error) {
+func (m *MemoryStorage) AllBlockEntries(onlyActive bool) ([]BlockEntry, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	entries := make([]BlockEntry, 0, len(m.blockEntries))
 	for _, e := range m.blockEntries {
-		entries = append(entries, e)
+		if onlyActive && e.IsActive() {
+			entries = append(entries, e)
+		}
 	}
 
 	return entries, nil

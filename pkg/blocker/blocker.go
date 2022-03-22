@@ -128,7 +128,7 @@ func (b *Blocker) Policy() Policy {
 }
 
 func (b *Blocker) NotifyAll() error {
-	entries, err := b.store.AllBlockEntries()
+	entries, err := b.store.AllBlockEntries(false)
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve all block entries")
 	}

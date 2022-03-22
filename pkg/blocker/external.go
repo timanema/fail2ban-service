@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"time"
 )
 
 type externalRequest struct {
@@ -17,7 +16,7 @@ type externalRequest struct {
 }
 
 func (b *Blocker) notifyExternal(entry storage.BlockEntry) error {
-	block := entry.Timestamp.Time().Add(entry.Duration).After(time.Now())
+	block := entry.IsActive()
 	req := externalRequest{
 		BlockEntry: entry,
 		Blocked:    block,

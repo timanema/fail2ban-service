@@ -113,8 +113,8 @@ func (p *PersistentStorage) FindBlockEntry(ip string) (BlockEntry, error) {
 	return p.memory.FindBlockEntry(ip)
 }
 
-func (p *PersistentStorage) AllBlockEntries() ([]BlockEntry, error) {
-	return p.memory.AllBlockEntries()
+func (p *PersistentStorage) AllBlockEntries(onlyActive bool) ([]BlockEntry, error) {
+	return p.memory.AllBlockEntries(onlyActive)
 }
 
 func (p *PersistentStorage) CleanBlockEntries() error {

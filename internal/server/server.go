@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"github.com/timanema/fail2ban-service/pkg/blocker"
 	"github.com/timanema/fail2ban-service/pkg/storage"
 	"log"
@@ -50,7 +51,13 @@ func (s *Server) ListenAndServe() {
 	entryRouter.HandleFunc("/list/{ip}", s.listEntries).Methods(http.MethodGet)
 	entryRouter.HandleFunc("/add/{ip}", s.addEntry).Methods(http.MethodPut)
 
-	s.server = &http.Server{Addr: ":8080", Handler: router}
+	c := cors.New(cors.Options{
+		AllowedMethods:   []string{"GET", "POST", "OPTIONS", "PATCH", "HEAD", "PUT"},
+		AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		AllowCredentials: true,
+	})
+
+	s.server = &http.Server{Addr: ":8080", Handler: c.Handler(router)}
 
 	log.Fatalln(s.server.ListenAndServe())
 }

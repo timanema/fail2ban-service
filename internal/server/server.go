@@ -2,31 +2,43 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/timanema/fail2ban-service/pkg/blocker"
 	"github.com/timanema/fail2ban-service/pkg/storage"
+	"github.com/timanema/fail2ban-service/pkg/unix_time"
 	"log"
+	"math/rand"
 	"net/http"
 	"time"
 )
 
+type Config struct {
+	GenerateDebugData bool `default:"true"`
+}
+
 type Server struct {
 	store   storage.Storage
 	blocker *blocker.Blocker
+	config  Config
 
 	server *http.Server
 }
 
-func New(store storage.Storage, policy blocker.Policy) *Server {
+func New(store storage.Storage, policy blocker.Policy, config Config) *Server {
 	s := &Server{
 		store:   store,
 		blocker: blocker.New(store, policy),
+		config:  config,
 	}
 
-	err := s.blocker.NotifyAll()
-	if err != nil {
-		log.Fatalf("unable to start blocker: %v\n\n", err)
+	if err := s.blocker.NotifyAll(); err != nil {
+		log.Fatalf("unable to start blocker: %v\n", err)
+	}
+
+	if s.config.GenerateDebugData {
+		go s.generateDebugData()
 	}
 
 	return s
@@ -67,4 +79,19 @@ func (s *Server) Shutdown() error {
 	defer cancel()
 
 	return s.server.Shutdown(ctx)
+}
+
+func (s *Server) generateDebugData() {
+	log.Printf("generation of debug data is enabled, generating 10 random entries")
+	for i := 0; i < 10; i++ {
+		entry := storage.BlockEntry{
+			Source:    fmt.Sprintf("%v.%v.%v.%v", rand.Intn(255), rand.Intn(255), rand.Intn(255), rand.Intn(255)),
+			Timestamp: unix_time.Time(time.Now()),
+			Duration:  time.Minute*time.Duration(rand.Intn(5)) + time.Second*time.Duration(rand.Intn(60)),
+		}
+
+		if err := s.store.AddBlockEntry(entry); err != nil {
+			log.Printf("unable to add debug block entry: %v\n", err)
+		}
+	}
 }

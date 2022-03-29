@@ -2,7 +2,8 @@
 Simple modular centralized fail2ban clone
 
 ## API
-This section lists all provided endpoints
+This section lists all provided endpoints. When the API key is enabled requests need to provide this key using the query 
+parameter using the `key` parameter. This would result in: `http://<address>/<endpoint>?key=<api key>`.
 
 | Endpoint | Purpose | Method | Notes | Expected body |  
 | --- | --- | --- | --- | --- |

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/timanema/fail2ban-service/pkg/blocker"
@@ -15,7 +16,10 @@ import (
 )
 
 type Config struct {
-	GenerateDebugData bool `default:"true"`
+	GenerateDebugData bool `default:"true" split_words:"true"`
+
+	ApiKeyEnabled bool   `default:"true" split_words:"true"`
+	ApiKey        string `split_words:"true"`
 }
 
 type Server struct {
@@ -33,15 +37,25 @@ func New(store storage.Storage, policy blocker.Policy, config Config) *Server {
 		config:  config,
 	}
 
-	if err := s.blocker.NotifyAll(); err != nil {
-		log.Fatalf("unable to start blocker: %v\n", err)
-	}
-
-	if s.config.GenerateDebugData {
-		go s.generateDebugData()
-	}
-
 	return s
+}
+
+func (s *Server) apiKeyMiddleware(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.config.ApiKeyEnabled {
+			params := r.URL.Query()
+			key, ok := params["key"]
+			if !ok || len(key) != 1 {
+				w.WriteHeader(http.StatusUnauthorized)
+			} else if s.config.ApiKey != key[0] {
+				w.WriteHeader(http.StatusForbidden)
+			} else {
+				h.ServeHTTP(w, r)
+			}
+		} else {
+			h.ServeHTTP(w, r)
+		}
+	})
 }
 
 func (s *Server) ListenAndServe() {
@@ -69,7 +83,30 @@ func (s *Server) ListenAndServe() {
 		AllowCredentials: true,
 	})
 
-	s.server = &http.Server{Addr: ":8080", Handler: c.Handler(router)}
+	s.server = &http.Server{Addr: ":8080", Handler: c.Handler(s.apiKeyMiddleware(router))}
+
+	if s.config.GenerateDebugData {
+		go s.generateDebugData()
+	}
+
+	if s.config.ApiKeyEnabled {
+		if s.config.ApiKey == "" {
+			id, err := uuid.NewRandom()
+			if err != nil {
+				log.Fatalf("unable to generate an API key: %v\n", err)
+			}
+
+			s.config.ApiKey = id.String()
+		}
+
+		log.Printf("using API key: %v\n", s.config.ApiKey)
+	}
+
+	if err := s.blocker.NotifyAll(); err != nil {
+		log.Fatalf("unable to start blocker: %v\n", err)
+	}
+
+	go s.blocker.StartExternalUpdateLoop()
 
 	log.Fatalln(s.server.ListenAndServe())
 }
@@ -87,7 +124,7 @@ func (s *Server) generateDebugData() {
 		entry := storage.BlockEntry{
 			Source:    fmt.Sprintf("%v.%v.%v.%v", rand.Intn(255), rand.Intn(255), rand.Intn(255), rand.Intn(255)),
 			Timestamp: unix_time.Time(time.Now()),
-			Duration:  time.Minute*time.Duration(rand.Intn(5)) + time.Second*time.Duration(rand.Intn(60)),
+			Duration:  time.Hour*time.Duration(rand.Intn(4)) + time.Minute*time.Duration(rand.Intn(60)),
 		}
 
 		if err := s.store.AddBlockEntry(entry); err != nil {

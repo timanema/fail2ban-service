@@ -13,7 +13,7 @@ import (
 
 type Config struct {
 	server.Config
-	StorageType string `default:"memory"`
+	StorageType string `default:"memory" split_words:"true"`
 }
 
 func main() {
@@ -28,12 +28,12 @@ func main() {
 	var store storage.Storage
 	switch c.StorageType {
 	case "memory":
-		store = storage.NewPersistentStore()
+		store = storage.NewMemoryStore()
 	case "persistent":
 		store = storage.NewPersistentStore()
 	default:
 		log.Printf("invalid storage type: %v, using 'memory' type as fallback\n", c.StorageType)
-		store = storage.NewPersistentStore()
+		store = storage.NewMemoryStore()
 	}
 
 	p := store

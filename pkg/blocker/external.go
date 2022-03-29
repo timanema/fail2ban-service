@@ -3,11 +3,13 @@ package blocker
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/timanema/fail2ban-service/pkg/storage"
 	"log"
 	"math/rand"
 	"net/http"
+	"time"
 )
 
 type externalRequest struct {
@@ -24,7 +26,8 @@ func (b *Blocker) notifyExternal(entry storage.BlockEntry) error {
 
 	// Check if notification is not needed
 	b.lock.Lock()
-	lastUpdate, ok := b.lastExternalUpdate[entry.Source]
+	lookupId := fmt.Sprintf("%v-%v", entry.Source, entry.Timestamp.Time().Unix())
+	lastUpdate, ok := b.lastExternalUpdate[lookupId]
 	b.lock.Unlock()
 
 	if ok && lastUpdate == block {
@@ -66,8 +69,21 @@ func (b *Blocker) notifyExternal(entry storage.BlockEntry) error {
 	}
 
 	b.lock.Lock()
-	b.lastExternalUpdate[entry.Source] = block
+	b.lastExternalUpdate[lookupId] = block
 	b.lock.Unlock()
 
 	return nil
+}
+
+func (b *Blocker) StartExternalUpdateLoop() {
+	ticker := time.NewTicker(5 * time.Second)
+
+	for {
+		select {
+		case <-ticker.C:
+			if err := b.NotifyAll(); err != nil {
+				log.Printf("error while running unblock loop: %v\n", err)
+			}
+		}
+	}
 }

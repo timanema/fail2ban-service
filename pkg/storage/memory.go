@@ -91,7 +91,7 @@ func (m *MemoryStorage) AllBlockEntries(onlyActive bool) ([]BlockEntry, error) {
 
 	entries := make([]BlockEntry, 0, len(m.blockEntries))
 	for _, e := range m.blockEntries {
-		if onlyActive && e.IsActive() {
+		if !onlyActive || (onlyActive && e.IsActive()) {
 			entries = append(entries, e)
 		}
 	}

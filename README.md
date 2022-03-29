@@ -55,3 +55,13 @@ Example request of an unblock event:
   "blocked": false
 }
 ```
+
+## Configuration
+The server can be configured using environment variables, although the default are sensible:
+
+| Key | Description | Possible values |
+| --- | --- | --- |
+| FAIL2BAN_STORAGE_TYPE | Sets the type of storage | persistent / memory (default) |
+| FAIL2BAN_GENERATE_DEBUG_DATA | If true generates some debug data | boolean (default: true) |
+| FAIL2BAN_API_KEY_ENABLED | If true API calls need to use an API key | boolean (default: false) |
+| FAIL2BAN_API_KEY | The API key to use, leave empty for a random key on start | string (default: <empty>) |

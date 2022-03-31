@@ -12,6 +12,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -20,6 +21,8 @@ type Config struct {
 
 	ApiKeyEnabled bool   `default:"false" split_words:"true"`
 	ApiKey        string `split_words:"true"`
+
+	IptablesBlockerEnabled bool `default:"true" split_words:"true"`
 }
 
 type Server struct {
@@ -100,6 +103,14 @@ func (s *Server) ListenAndServe() {
 		}
 
 		log.Printf("using API key: %v\n", s.config.ApiKey)
+	}
+
+	if s.config.IptablesBlockerEnabled {
+		log.Printf("internal iptables blocker is enabled, which requires sudo privileges to function properly")
+
+		if os.Geteuid() != 0 {
+			log.Printf("warning: it appears the server is not running with root privileges which is required for iptables, this might not work properly!")
+		}
 	}
 
 	if err := s.blocker.NotifyAll(); err != nil {

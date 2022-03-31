@@ -68,6 +68,13 @@ func (b *Blocker) notifyExternal(entry storage.BlockEntry) error {
 		}()
 	}
 
+	// Iptables banning
+	if block {
+		b.addIptablesBan(entry.Source)
+	} else {
+		b.removeIptablesBan(entry.Source)
+	}
+
 	b.lock.Lock()
 	b.lastExternalUpdate[lookupId] = block
 	b.lock.Unlock()

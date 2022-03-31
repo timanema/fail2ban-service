@@ -18,7 +18,7 @@ import (
 type Config struct {
 	GenerateDebugData bool `default:"true" split_words:"true"`
 
-	ApiKeyEnabled bool   `default:"true" split_words:"true"`
+	ApiKeyEnabled bool   `default:"false" split_words:"true"`
 	ApiKey        string `split_words:"true"`
 }
 

@@ -40,7 +40,13 @@ func (m *MemoryStorage) FindAuthenticationEntries(ip string) (map[Authentication
 	defer m.lock.RUnlock()
 
 	if entries, ok := m.authEntries[ip]; ok {
-		return entries, nil
+		res := make(map[AuthenticationEntry]struct{})
+
+		for k := range entries {
+			res[k] = struct{}{}
+		}
+
+		return res, nil
 	}
 
 	return nil, NotFoundErr
